@@ -1,102 +1,79 @@
+import Header from "@/components/Header";
+import LiveTicker from "@/components/LiveTicker";
+import Footer from "@/components/Footer";
+import CatalogGrid from "@/components/CatalogGrid";
+import { getCategories, getProducts } from "@/lib/products";
 import Link from "next/link";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { createClient } from "@/lib/supabase/server";
 
-function formatUsd(cents: number) {
-  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
+export const metadata = {
+  title: "Shop All Research Peptides & Compounds | FXlabs",
+  description:
+    "Browse the full FXlabs catalog: research peptides, blends and lab supplies, all 99%+ pure and third-party COA-tested. Research use only.",
+};
 
-export default async function ShopPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ category?: string }>;
-}) {
-  const { category: activeSlug } = await searchParams;
-  const supabase = await createClient();
-
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("id, name, slug")
-    .order("sort_order");
-
-  let query = supabase
-    .from("products")
-    .select("id, name, slug, sku, short_description, price_cents, categories(name, slug)")
-    .eq("is_active", true)
-    .order("name");
-
-  if (activeSlug) {
-    const cat = categories?.find((c) => c.slug === activeSlug);
-    if (cat) query = query.eq("category_id", cat.id);
-  }
-
-  const { data: products } = await query;
+export default async function ShopPage() {
+  const [products, categories] = await Promise.all([getProducts(), getCategories()]);
+  const avgDiscount = products.length
+    ? Math.round(
+        products.reduce((sum, p) => {
+          if (!p.compare_at_price_cents) return sum;
+          return (
+            sum + ((p.compare_at_price_cents - p.price_cents) / p.compare_at_price_cents) * 100
+          );
+        }, 0) / products.filter((p) => p.compare_at_price_cents).length || 0
+      )
+    : 0;
 
   return (
     <>
       <Header />
-      <main className="mx-auto max-w-6xl px-6 py-16">
-        <p className="text-sm font-medium text-amber-600">Full catalog</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-ink-900 md:text-4xl">
-          {products?.length ?? 0} research compounds, sold by the unit
-        </h1>
-        <p className="mt-3 max-w-2xl text-graphite-700">
-          Prices shown are the current per-vial cost basis and will be updated with final pricing and product
-          photos.
-        </p>
+      <LiveTicker products={products} />
 
-        <div className="mt-8 flex flex-wrap gap-2">
-          <FilterPill href="/shop" active={!activeSlug} label="All" />
-          {categories?.map((c) => (
-            <FilterPill key={c.id} href={`/shop?category=${c.slug}`} active={activeSlug === c.slug} label={c.name} />
-          ))}
+      <section className="border-b border-navy-800/10 bg-navy-950">
+        <div className="mx-auto max-w-7xl px-6 py-14">
+          <h1 className="text-3xl font-bold text-paper sm:text-4xl">Catalog</h1>
+          <p className="mt-2 max-w-2xl text-navy-300">
+            99%+ purity, HPLC + Mass Spec verified, CoA per batch. Every card shows current
+            pricing and available strengths at a glance.
+          </p>
+          <dl className="mt-8 flex flex-wrap gap-10">
+            <div>
+              <dt className="text-2xl font-bold text-paper">{products.length}</dt>
+              <dd className="text-sm text-navy-400">catalog SKUs</dd>
+            </div>
+            {avgDiscount > 0 && (
+              <div>
+                <dt className="text-2xl font-bold text-paper">{avgDiscount}%</dt>
+                <dd className="text-sm text-navy-400">avg. below list price</dd>
+              </div>
+            )}
+          </dl>
         </div>
+      </section>
 
-        <div className="mt-8 overflow-hidden rounded-xl border border-graphite-900/10 bg-porcelain-50">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-graphite-900/10 bg-porcelain-100 text-xs uppercase tracking-wide text-graphite-700/70">
-                <th className="px-5 py-3 font-medium">Compound</th>
-                <th className="px-5 py-3 font-medium">SKU</th>
-                <th className="hidden px-5 py-3 font-medium sm:table-cell">Spec</th>
-                <th className="hidden px-5 py-3 font-medium md:table-cell">Category</th>
-                <th className="px-5 py-3 text-right font-medium">Unit price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products?.map((p) => {
-                const cat = Array.isArray(p.categories) ? p.categories[0] : p.categories;
-                return (
-                  <tr key={p.id} className="border-b border-graphite-900/5 last:border-0 hover:bg-porcelain-100/60">
-                    <td className="px-5 py-3 font-medium text-ink-900">{p.name}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-graphite-700">{p.sku}</td>
-                    <td className="hidden px-5 py-3 text-graphite-700 sm:table-cell">{p.short_description}</td>
-                    <td className="hidden px-5 py-3 text-graphite-700 md:table-cell">{cat?.name ?? "—"}</td>
-                    <td className="px-5 py-3 text-right font-medium text-ink-900">{formatUsd(p.price_cents)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      <section className="mx-auto max-w-7xl px-6 py-14">
+        <CatalogGrid products={products} categories={categories} />
+      </section>
+
+      <section className="border-y border-navy-800/10 bg-white">
+        <div className="mx-auto max-w-7xl px-6 py-14 text-center">
+          <h2 className="text-xl font-bold text-navy-950">
+            Ordering for a lab? Volume pricing kicks in at 10+ vials.
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-navy-800/70">
+            Per-vial cost drops further at volume. Send a quote request with your compound list
+            and target quantities.
+          </p>
+          <Link
+            href="/contact"
+            className="mt-6 inline-block rounded-full bg-navy-900 px-6 py-3 text-sm font-semibold text-paper hover:bg-navy-800"
+          >
+            Request a volume quote →
+          </Link>
         </div>
-      </main>
+      </section>
+
       <Footer />
     </>
-  );
-}
-
-function FilterPill({ href, active, label }: { href: string; active: boolean; label: string }) {
-  return (
-    <Link
-      href={href}
-      className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-        active
-          ? "border-graphite-900 bg-graphite-900 text-porcelain-50"
-          : "border-graphite-900/15 text-graphite-700 hover:border-amber-500 hover:text-amber-600"
-      }`}
-    >
-      {label}
-    </Link>
   );
 }

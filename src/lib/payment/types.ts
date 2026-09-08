@@ -1,35 +1,19 @@
-// Payment gateway abstraction.
-// Add a new provider by implementing this interface and registering it
-// in provider-registry.ts — no changes needed to checkout flow itself.
+export type PaymentProviderId = "stripe" | "nmi" | "authorize_net";
 
-export interface ChargeRequest {
+export type ChargeRequest = {
   amountCents: number;
-  currency: string; // e.g. 'usd'
+  currency: string;
   orderId: string;
-  customerEmail: string;
   metadata?: Record<string, string>;
-}
+};
 
-export interface ChargeResult {
+export type ChargeResult = {
   success: boolean;
-  providerReference?: string; // transaction/charge id from the gateway
-  errorMessage?: string;
-  requiresAction?: boolean; // e.g. 3DS redirect needed
-  actionUrl?: string;
-}
-
-export interface RefundRequest {
-  providerReference: string;
-  amountCents?: number; // omit for full refund
-}
-
-export interface RefundResult {
-  success: boolean;
-  errorMessage?: string;
-}
+  reference?: string;
+  error?: string;
+};
 
 export interface PaymentProvider {
-  name: string; // 'stripe' | 'nmi' | 'authorize_net' | ...
-  charge(req: ChargeRequest): Promise<ChargeResult>;
-  refund(req: RefundRequest): Promise<RefundResult>;
+  id: PaymentProviderId | "not_configured";
+  charge(request: ChargeRequest): Promise<ChargeResult>;
 }

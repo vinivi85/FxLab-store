@@ -1,71 +1,56 @@
 import Link from "next/link";
 
-const BADGES = [
-  "Lot-specific documentation",
-  "Third-party purity data on file",
-  "Same-day dispatch, tracked",
-];
-
-export function Hero() {
+export default function Hero() {
   return (
-    <section className="border-b border-graphite-900/10 bg-graphite-950 text-porcelain-50">
-      <div className="mx-auto grid max-w-6xl gap-12 px-6 py-20 md:grid-cols-[1.1fr_0.9fr] md:py-28">
-        <div>
-          <p className="text-sm font-medium text-amber-400">Research-use-only · US catalog</p>
-          <h1 className="mt-4 font-display text-4xl font-semibold leading-[1.1] tracking-tight md:text-5xl">
-            A peptide inventory built to be checked, not just trusted.
-          </h1>
-          <p className="mt-6 max-w-lg text-lg text-porcelain-100/75">
-            155 catalogued compounds, organized by research area — with the spec, unit count, and lot
-            handling researchers actually need before they order.
-          </p>
-          <div className="mt-8 flex flex-wrap gap-4">
-            <Link
-              href="/shop"
-              className="rounded-full bg-amber-500 px-6 py-3 text-sm font-semibold text-graphite-950 hover:bg-amber-400"
-            >
-              Browse the catalog
-            </Link>
-            <Link
-              href="/shop#rewards"
-              className="rounded-full border border-porcelain-50/30 px-6 py-3 text-sm font-semibold text-porcelain-50 hover:border-amber-400 hover:text-amber-400"
-            >
-              How rewards work
-            </Link>
-          </div>
-          <dl className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-porcelain-50/10 pt-6 text-sm">
-            {BADGES.map((b) => (
-              <div key={b} className="text-porcelain-100/70">
-                {b}
-              </div>
-            ))}
-          </dl>
+    <section className="relative overflow-hidden bg-navy-950">
+      <div
+        className="pointer-events-none absolute inset-0 opacity-20"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle at 20% 20%, var(--color-navy-500) 0%, transparent 45%), radial-gradient(circle at 80% 0%, var(--color-navy-600) 0%, transparent 40%)",
+        }}
+      />
+      <div className="relative mx-auto max-w-7xl px-6 py-24 sm:py-32">
+        <span className="mb-5 inline-block rounded-full border border-navy-700 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-navy-300">
+          Research use only · not for human consumption
+        </span>
+        <h1 className="max-w-2xl text-4xl font-bold leading-tight text-paper sm:text-5xl">
+          Research peptides, verified to the batch.
+        </h1>
+        <p className="mt-5 max-w-xl text-lg text-navy-300">
+          99%+ purity, HPLC + mass spec verified, with a Certificate of Analysis on every lot.
+          Built for labs that need consistency they can put a number on.
+        </p>
+        <div className="mt-8 flex flex-wrap gap-4">
+          <Link
+            href="/shop"
+            className="rounded-full bg-paper px-6 py-3 text-sm font-semibold text-navy-950 transition hover:bg-navy-100"
+          >
+            Browse catalog
+          </Link>
+          <Link
+            href="/coa"
+            className="rounded-full border border-navy-600 px-6 py-3 text-sm font-semibold text-paper transition hover:bg-navy-900"
+          >
+            View certificates
+          </Link>
         </div>
 
-        {/* Inventory-card visual — an original data-sheet motif, not a product photo */}
-        <div className="self-center rounded-2xl border border-porcelain-50/10 bg-graphite-900 p-6 font-mono text-xs text-porcelain-100/80 shadow-2xl">
-          <div className="flex items-center justify-between border-b border-porcelain-50/10 pb-3">
-            <span className="text-amber-400">LOT RECORD</span>
-            <span>FX-2026-0417</span>
-          </div>
-          <dl className="mt-4 space-y-3">
-            <Row k="Compound" v="BPC-157" />
-            <Row k="Spec" v="5mg · 10 vials/box" />
-            <Row k="Category" v="Regenerative & Repair" />
-            <Row k="Unit price" v="calculated per vial" />
-            <Row k="Disclaimer" v="RUO — lab use only" />
-          </dl>
-        </div>
+        <dl className="mt-14 grid max-w-xl grid-cols-2 gap-8 sm:grid-cols-3">
+          <Stat value="99%+" label="Purity, every batch" />
+          <Stat value="HPLC" label="+ Mass Spec verified" />
+          <Stat value="1:1" label="COA per lot" />
+        </dl>
       </div>
     </section>
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+function Stat({ value, label }: { value: string; label: string }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <dt className="text-porcelain-100/50">{k}</dt>
-      <dd className="text-right text-porcelain-50">{v}</dd>
+    <div>
+      <dt className="text-2xl font-bold text-paper">{value}</dt>
+      <dd className="text-sm text-navy-400">{label}</dd>
     </div>
   );
 }

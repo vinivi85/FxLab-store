@@ -1,47 +1,85 @@
-export function Footer() {
+import Link from "next/link";
+
+export default function Footer() {
   return (
-    <footer className="mt-auto border-t border-graphite-900/10 bg-graphite-950 text-porcelain-100">
-      <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="grid gap-10 md:grid-cols-4">
-          <div>
-            <p className="font-display text-lg font-semibold text-porcelain-50">FXLabs</p>
-            <p className="mt-3 max-w-xs text-sm text-porcelain-100/70">
-              Reference-grade research compounds, documented lot by lot. For laboratory research use only.
-            </p>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-porcelain-50">Shop</p>
-            <ul className="mt-3 space-y-2 text-sm text-porcelain-100/70">
-              <li>Catalog</li>
-              <li>Rewards</li>
-              <li>Bulk orders</li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-porcelain-50">Support</p>
-            <ul className="mt-3 space-y-2 text-sm text-porcelain-100/70">
-              <li>About</li>
-              <li>FAQ</li>
-              <li>Contact</li>
-            </ul>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-porcelain-50">Research use only</p>
-            <p className="mt-3 text-sm text-porcelain-100/70">
-              Not for human or animal consumption, ingestion, or injection.
-            </p>
-          </div>
+    <footer className="mt-24 bg-navy-950 text-navy-300">
+      <div className="mx-auto max-w-7xl px-6 py-14">
+        <div className="mb-10 flex items-baseline gap-1.5">
+          <span className="text-2xl font-bold tracking-tight text-paper">
+            FX<span className="font-light">labs</span>
+          </span>
+          <span className="text-xs font-medium uppercase tracking-[0.2em] text-navy-400">
+            peptides
+          </span>
         </div>
-        <p className="mt-10 max-w-4xl text-xs leading-relaxed text-porcelain-100/50">
-          FOR RESEARCH USE ONLY. Products offered on this site are intended solely for in-vitro laboratory
-          research and development. These statements have not been evaluated by the FDA. These products are not
-          drugs, foods, dietary supplements, or cosmetics, and are not intended to diagnose, treat, cure, or
-          prevent any disease. By purchasing from FXLabs you confirm you are a qualified researcher or
-          institution and will handle, store, and dispose of materials in accordance with applicable laws and
-          institutional safety protocols.
-        </p>
-        <p className="mt-6 text-xs text-porcelain-100/40">© {new Date().getFullYear()} FXLabs. All rights reserved.</p>
+
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
+          <FooterColumn
+            title="Shop"
+            links={[
+              ["Full catalog", "/shop"],
+              ["FXlabs Promise", "/promise"],
+              ["Wholesale", "/wholesale"],
+              ["Cart", "/cart"],
+            ]}
+          />
+          <FooterColumn
+            title="Resources"
+            links={[
+              ["Rewards", "/rewards"],
+              ["Certificate archive", "/coa"],
+              ["Quality process", "/quality"],
+            ]}
+          />
+          <FooterColumn
+            title="Support"
+            links={[
+              ["Contact us", "/contact"],
+              ["FAQ", "/faq"],
+              ["Shipping", "/shipping"],
+              ["Returns", "/returns"],
+            ]}
+          />
+          <FooterColumn
+            title="Legal"
+            links={[
+              ["Privacy", "/privacy"],
+              ["Terms", "/terms"],
+              ["Research-use only", "/research-use-only"],
+              ["FDA disclaimer", "/fda-disclaimer"],
+            ]}
+          />
+        </div>
+
+        <div className="mt-12 border-t border-navy-800 pt-8 text-xs leading-relaxed text-navy-400">
+          <p className="mb-4">
+            Statements made regarding these products have not been evaluated by the U.S. Food and
+            Drug Administration. The efficacy of these products has not been confirmed by
+            FDA-approved research. These products are not intended to diagnose, treat, cure, or
+            prevent any disease. All products are sold strictly for laboratory research use only
+            and are not intended for human or veterinary use. Information on this site is not a
+            substitute for advice from a qualified healthcare practitioner.
+          </p>
+          <p>© {new Date().getFullYear()} FXlabs. All rights reserved.</p>
+        </div>
       </div>
     </footer>
+  );
+}
+
+function FooterColumn({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div>
+      <h4 className="mb-3 text-sm font-semibold text-paper">{title}</h4>
+      <ul className="space-y-2 text-sm">
+        {links.map(([label, href]) => (
+          <li key={href}>
+            <Link href={href} className="transition hover:text-paper">
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
