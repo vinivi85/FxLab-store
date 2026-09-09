@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import AddProductForm from "@/components/AddProductForm";
 import CsvImportPanel from "@/components/CsvImportPanel";
+import ProductImageCell from "@/components/ProductImageCell";
 
 type ProductMetadata = {
   box_spec?: string;
@@ -22,6 +23,7 @@ type AdminProduct = {
   stock_quantity: number;
   is_active: boolean;
   metadata: ProductMetadata;
+  image_urls: string[];
 };
 
 function unitCostDollars(p: AdminProduct): number | null {
@@ -58,7 +60,7 @@ export default function AdminProductsTable() {
   async function loadProducts() {
     const { data, error } = await supabase
       .from("products")
-      .select("id, name, slug, price_cents, compare_at_price_cents, stock_quantity, is_active, metadata")
+      .select("id, name, slug, price_cents, compare_at_price_cents, stock_quantity, is_active, metadata, image_urls")
       .order("name", { ascending: true });
     if (error) {
       setLoadError(error.message);
@@ -155,6 +157,7 @@ export default function AdminProductsTable() {
         <table className="w-full text-sm">
           <thead className="bg-navy-100 text-left text-xs uppercase tracking-wide text-navy-800/60">
             <tr>
+              <th className="px-4 py-3">Photo</th>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3">
                 Box price
@@ -204,6 +207,14 @@ export default function AdminProductsTable() {
 
               return (
                 <tr key={p.id} className="border-t border-navy-800/10">
+                  <td className="px-4 py-2">
+                    <ProductImageCell
+                      productId={p.id}
+                      productSlug={p.slug}
+                      imageUrl={p.image_urls?.[0] ?? null}
+                      onUploaded={(url) => updateLocal(p.id, { image_urls: [url] })}
+                    />
+                  </td>
                   <td className="px-4 py-2">
                     <div className="font-medium text-navy-950">{p.name}</div>
                     <div className="text-xs text-navy-800/50">
