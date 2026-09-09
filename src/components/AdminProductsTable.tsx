@@ -22,6 +22,13 @@ type AdminProduct = {
   metadata: ProductMetadata;
 };
 
+function unitCostDollars(p: AdminProduct): number | null {
+  const box = p.metadata?.box_cost_usd;
+  const units = p.metadata?.units_per_box;
+  if (!box || !units) return null;
+  return box / units;
+}
+
 export default function AdminProductsTable() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -60,14 +67,8 @@ export default function AdminProductsTable() {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
 
-  function handleBoxPriceChange(product: AdminProduct, boxPriceDollars: string) {
-    const boxCost = parseFloat(boxPriceDollars || "0");
-    const unitsPerBox = product.metadata?.units_per_box || 10;
-    const newPriceCents = Math.round((boxCost / unitsPerBox) * 100);
-    updateLocal(product.id, {
-      metadata: { ...product.metadata, box_cost_usd: boxCost },
-      price_cents: newPriceCents,
-    });
+  function updateMetadata(product: AdminProduct, patch: Partial<ProductMetadata>) {
+    updateLocal(product.id, { metadata: { ...product.metadata, ...patch } });
   }
 
   async function saveRow(product: AdminProduct) {
@@ -111,8 +112,9 @@ export default function AdminProductsTable() {
         <div>
           <h1 className="text-2xl font-bold text-navy-950">Product prices &amp; stock</h1>
           <p className="mt-1 text-sm text-navy-800/60">
-            Enter the supplier&apos;s box price (10 units) — the per-vial price updates
-            automatically. You can still fine-tune the per-vial price by hand afterward.
+            Enter the supplier&apos;s box price and how many vials come in that box (varies —
+            6, 10, etc). Unit cost and margin calculate automatically once you set your selling
+            price.
           </p>
         </div>
         <button
@@ -141,105 +143,168 @@ export default function AdminProductsTable() {
             <tr>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3">
-                Supplier box price
+                Box price
                 <div className="text-[10px] font-normal normal-case text-navy-800/40">
-                  (10 units, $)
+                  supplier, $
                 </div>
               </th>
               <th className="px-4 py-3">
-                Price / vial ($)
+                Units/box
                 <div className="text-[10px] font-normal normal-case text-navy-800/40">
-                  what customers pay
+                  6, 10, etc.
+                </div>
+              </th>
+              <th className="px-4 py-3">
+                Unit cost
+                <div className="text-[10px] font-normal normal-case text-navy-800/40">
+                  auto
+                </div>
+              </th>
+              <th className="px-4 py-3">
+                Selling price
+                <div className="text-[10px] font-normal normal-case text-navy-800/40">
+                  per vial, $
+                </div>
+              </th>
+              <th className="px-4 py-3">
+                Margin
+                <div className="text-[10px] font-normal normal-case text-navy-800/40">
+                  auto
                 </div>
               </th>
               <th className="px-4 py-3">Compare-at ($)</th>
-              <th className="px-4 py-3">Stock (vials)</th>
+              <th className="px-4 py-3">Stock</th>
               <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="border-t border-navy-800/10">
-                <td className="px-4 py-2">
-                  <div className="font-medium text-navy-950">{p.name}</div>
-                  <div className="text-xs text-navy-800/50">
-                    {p.metadata?.box_spec ?? p.slug}
-                  </div>
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={p.metadata?.box_cost_usd ?? ""}
-                    onChange={(e) => handleBoxPriceChange(p, e.target.value)}
-                    className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={(p.price_cents / 100).toFixed(2)}
-                    onChange={(e) =>
-                      updateLocal(p.id, {
-                        price_cents: Math.round(parseFloat(e.target.value || "0") * 100),
-                      })
-                    }
-                    className="w-24 rounded-lg border border-navy-800/20 bg-navy-100/40 px-2 py-1 font-semibold"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={
-                      p.compare_at_price_cents != null
-                        ? (p.compare_at_price_cents / 100).toFixed(2)
-                        : ""
-                    }
-                    placeholder="—"
-                    onChange={(e) =>
-                      updateLocal(p.id, {
-                        compare_at_price_cents: e.target.value
-                          ? Math.round(parseFloat(e.target.value) * 100)
-                          : null,
-                      })
-                    }
-                    className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    step="1"
-                    value={p.stock_quantity}
-                    onChange={(e) =>
-                      updateLocal(p.id, {
-                        stock_quantity: parseInt(e.target.value || "0", 10),
-                      })
-                    }
-                    className="w-20 rounded-lg border border-navy-800/20 px-2 py-1"
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <input
-                    type="checkbox"
-                    checked={p.is_active}
-                    onChange={(e) => updateLocal(p.id, { is_active: e.target.checked })}
-                  />
-                </td>
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => saveRow(p)}
-                    disabled={savingId === p.id}
-                    className="rounded-full bg-navy-900 px-3 py-1.5 text-xs font-semibold text-paper hover:bg-navy-800 disabled:opacity-50"
-                  >
-                    {savingId === p.id ? "Saving…" : savedId === p.id ? "Saved ✓" : "Save"}
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {filtered.map((p) => {
+              const unitCost = unitCostDollars(p);
+              const sellPrice = p.price_cents / 100;
+              const marginDollars = unitCost != null ? sellPrice - unitCost : null;
+              const marginPct =
+                marginDollars != null && sellPrice > 0
+                  ? (marginDollars / sellPrice) * 100
+                  : null;
+
+              return (
+                <tr key={p.id} className="border-t border-navy-800/10">
+                  <td className="px-4 py-2">
+                    <div className="font-medium text-navy-950">{p.name}</div>
+                    <div className="text-xs text-navy-800/50">
+                      {p.metadata?.box_spec ?? p.slug}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={p.metadata?.box_cost_usd ?? ""}
+                      onChange={(e) =>
+                        updateMetadata(p, {
+                          box_cost_usd: e.target.value ? parseFloat(e.target.value) : undefined,
+                        })
+                      }
+                      className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      step="1"
+                      value={p.metadata?.units_per_box ?? ""}
+                      onChange={(e) =>
+                        updateMetadata(p, {
+                          units_per_box: e.target.value ? parseInt(e.target.value, 10) : undefined,
+                        })
+                      }
+                      className="w-16 rounded-lg border border-navy-800/20 px-2 py-1"
+                    />
+                  </td>
+                  <td className="px-4 py-2 text-navy-800/70">
+                    {unitCost != null ? `$${unitCost.toFixed(2)}` : "—"}
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={sellPrice.toFixed(2)}
+                      onChange={(e) =>
+                        updateLocal(p.id, {
+                          price_cents: Math.round(parseFloat(e.target.value || "0") * 100),
+                        })
+                      }
+                      className="w-24 rounded-lg border border-navy-800/20 bg-navy-100/40 px-2 py-1 font-semibold"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    {marginDollars != null ? (
+                      <span
+                        className={
+                          marginDollars >= 0
+                            ? "font-medium text-emerald-700"
+                            : "font-medium text-red-600"
+                        }
+                      >
+                        ${marginDollars.toFixed(2)} ({marginPct?.toFixed(0)}%)
+                      </span>
+                    ) : (
+                      <span className="text-navy-800/40">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={
+                        p.compare_at_price_cents != null
+                          ? (p.compare_at_price_cents / 100).toFixed(2)
+                          : ""
+                      }
+                      placeholder="—"
+                      onChange={(e) =>
+                        updateLocal(p.id, {
+                          compare_at_price_cents: e.target.value
+                            ? Math.round(parseFloat(e.target.value) * 100)
+                            : null,
+                        })
+                      }
+                      className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="number"
+                      step="1"
+                      value={p.stock_quantity}
+                      onChange={(e) =>
+                        updateLocal(p.id, {
+                          stock_quantity: parseInt(e.target.value || "0", 10),
+                        })
+                      }
+                      className="w-16 rounded-lg border border-navy-800/20 px-2 py-1"
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      checked={p.is_active}
+                      onChange={(e) => updateLocal(p.id, { is_active: e.target.checked })}
+                    />
+                  </td>
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => saveRow(p)}
+                      disabled={savingId === p.id}
+                      className="rounded-full bg-navy-900 px-3 py-1.5 text-xs font-semibold text-paper hover:bg-navy-800 disabled:opacity-50"
+                    >
+                      {savingId === p.id ? "Saving…" : savedId === p.id ? "Saved ✓" : "Save"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
