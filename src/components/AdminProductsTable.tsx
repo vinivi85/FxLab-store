@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import AddProductForm from "@/components/AddProductForm";
+import CsvImportPanel from "@/components/CsvImportPanel";
 
 type ProductMetadata = {
   box_spec?: string;
@@ -34,6 +36,7 @@ export default function AdminProductsTable() {
   const router = useRouter();
   const [checking, setChecking] = useState(true);
   const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export default function AdminProductsTable() {
       }
       setChecking(false);
       loadProducts();
+      loadCategories();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,6 +65,11 @@ export default function AdminProductsTable() {
       return;
     }
     setProducts(data ?? []);
+  }
+
+  async function loadCategories() {
+    const { data } = await supabase.from("categories").select("id, name").order("name");
+    setCategories(data ?? []);
   }
 
   function updateLocal(id: string, patch: Partial<AdminProduct>) {
@@ -126,6 +135,11 @@ export default function AdminProductsTable() {
       </div>
 
       {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
+
+      <div className="flex flex-wrap items-start">
+        <AddProductForm categories={categories} onCreated={loadProducts} />
+        <CsvImportPanel products={products} onImported={loadProducts} />
+      </div>
 
       <input
         type="text"
