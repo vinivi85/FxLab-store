@@ -4,6 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type ProductMetadata = {
+  box_spec?: string;
+  box_cost_usd?: number;
+  units_per_box?: number;
+  [key: string]: unknown;
+};
+
 type AdminProduct = {
   id: string;
   name: string;
@@ -12,7 +19,7 @@ type AdminProduct = {
   compare_at_price_cents: number | null;
   stock_quantity: number;
   is_active: boolean;
-  metadata: { box_spec?: string };
+  metadata: ProductMetadata;
 };
 
 export default function AdminProductsTable() {
@@ -53,6 +60,16 @@ export default function AdminProductsTable() {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
 
+  function handleBoxPriceChange(product: AdminProduct, boxPriceDollars: string) {
+    const boxCost = parseFloat(boxPriceDollars || "0");
+    const unitsPerBox = product.metadata?.units_per_box || 10;
+    const newPriceCents = Math.round((boxCost / unitsPerBox) * 100);
+    updateLocal(product.id, {
+      metadata: { ...product.metadata, box_cost_usd: boxCost },
+      price_cents: newPriceCents,
+    });
+  }
+
   async function saveRow(product: AdminProduct) {
     setSavingId(product.id);
     setSavedId(null);
@@ -63,6 +80,7 @@ export default function AdminProductsTable() {
         compare_at_price_cents: product.compare_at_price_cents,
         stock_quantity: product.stock_quantity,
         is_active: product.is_active,
+        metadata: product.metadata,
       })
       .eq("id", product.id);
     setSavingId(null);
@@ -88,12 +106,13 @@ export default function AdminProductsTable() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto max-w-7xl px-6 py-10">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-navy-950">Product prices &amp; stock</h1>
           <p className="mt-1 text-sm text-navy-800/60">
-            Prices are per vial (1 unit = 1 vial, not per box). Edit and hit Save on each row.
+            Enter the supplier&apos;s box price (10 units) — the per-vial price updates
+            automatically. You can still fine-tune the per-vial price by hand afterward.
           </p>
         </div>
         <button
@@ -121,7 +140,18 @@ export default function AdminProductsTable() {
           <thead className="bg-navy-100 text-left text-xs uppercase tracking-wide text-navy-800/60">
             <tr>
               <th className="px-4 py-3">Product</th>
-              <th className="px-4 py-3">Price / vial ($)</th>
+              <th className="px-4 py-3">
+                Supplier box price
+                <div className="text-[10px] font-normal normal-case text-navy-800/40">
+                  (10 units, $)
+                </div>
+              </th>
+              <th className="px-4 py-3">
+                Price / vial ($)
+                <div className="text-[10px] font-normal normal-case text-navy-800/40">
+                  what customers pay
+                </div>
+              </th>
               <th className="px-4 py-3">Compare-at ($)</th>
               <th className="px-4 py-3">Stock (vials)</th>
               <th className="px-4 py-3">Active</th>
@@ -141,13 +171,22 @@ export default function AdminProductsTable() {
                   <input
                     type="number"
                     step="0.01"
+                    value={p.metadata?.box_cost_usd ?? ""}
+                    onChange={(e) => handleBoxPriceChange(p, e.target.value)}
+                    className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
+                  />
+                </td>
+                <td className="px-4 py-2">
+                  <input
+                    type="number"
+                    step="0.01"
                     value={(p.price_cents / 100).toFixed(2)}
                     onChange={(e) =>
                       updateLocal(p.id, {
                         price_cents: Math.round(parseFloat(e.target.value || "0") * 100),
                       })
                     }
-                    className="w-24 rounded-lg border border-navy-800/20 px-2 py-1"
+                    className="w-24 rounded-lg border border-navy-800/20 bg-navy-100/40 px-2 py-1 font-semibold"
                   />
                 </td>
                 <td className="px-4 py-2">
