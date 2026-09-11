@@ -157,6 +157,7 @@ export default function AdminProductsTable() {
         <table className="w-full text-sm">
           <thead className="bg-navy-100 text-left text-xs uppercase tracking-wide text-navy-800/60">
             <tr>
+              <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3">Photo</th>
               <th className="px-4 py-3">Product</th>
               <th className="px-4 py-3">
@@ -191,7 +192,6 @@ export default function AdminProductsTable() {
               </th>
               <th className="px-4 py-3">Compare-at ($)</th>
               <th className="px-4 py-3">Stock</th>
-              <th className="px-4 py-3">Active</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -207,6 +207,13 @@ export default function AdminProductsTable() {
 
               return (
                 <tr key={p.id} className="border-t border-navy-800/10">
+                  <td className="px-4 py-2">
+                    <input
+                      type="checkbox"
+                      checked={p.is_active}
+                      onChange={(e) => updateLocal(p.id, { is_active: e.target.checked })}
+                    />
+                  </td>
                   <td className="px-4 py-2">
                     <ProductImageCell
                       productId={p.id}
@@ -309,13 +316,6 @@ export default function AdminProductsTable() {
                         })
                       }
                       className="w-16 rounded-lg border border-navy-800/20 px-2 py-1"
-                    />
-                  </td>
-                  <td className="px-4 py-2">
-                    <input
-                      type="checkbox"
-                      checked={p.is_active}
-                      onChange={(e) => updateLocal(p.id, { is_active: e.target.checked })}
                     />
                   </td>
                   <td className="px-4 py-2">
