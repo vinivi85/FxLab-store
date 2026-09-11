@@ -43,6 +43,9 @@ export default function AdminProductsTable() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [dirtyIds, setDirtyIds] = useState<Set<string>>(new Set());
+  const [savingAll, setSavingAll] = useState(false);
+  const [saveAllMessage, setSaveAllMessage] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -76,6 +79,7 @@ export default function AdminProductsTable() {
 
   function updateLocal(id: string, patch: Partial<AdminProduct>) {
     setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+    setDirtyIds((prev) => new Set(prev).add(id));
   }
 
   function updateMetadata(product: AdminProduct, patch: Partial<ProductMetadata>) {
@@ -100,8 +104,57 @@ export default function AdminProductsTable() {
       alert("Failed to save: " + error.message);
       return;
     }
+    setDirtyIds((prev) => {
+      const next = new Set(prev);
+      next.delete(product.id);
+      return next;
+    });
     setSavedId(product.id);
     setTimeout(() => setSavedId(null), 1500);
+  }
+
+  async function saveAll() {
+    const toSave = products.filter((p) => dirtyIds.has(p.id));
+    if (toSave.length === 0) {
+      setSaveAllMessage("Nothing to save — no changes yet.");
+      setTimeout(() => setSaveAllMessage(null), 2500);
+      return;
+    }
+    setSavingAll(true);
+    setSaveAllMessage(null);
+    const failed: string[] = [];
+
+    for (const product of toSave) {
+      const { error } = await supabase
+        .from("products")
+        .update({
+          price_cents: product.price_cents,
+          compare_at_price_cents: product.compare_at_price_cents,
+          stock_quantity: product.stock_quantity,
+          is_active: product.is_active,
+          metadata: product.metadata,
+        })
+        .eq("id", product.id);
+      if (error) {
+        failed.push(product.name);
+      } else {
+        setDirtyIds((prev) => {
+          const next = new Set(prev);
+          next.delete(product.id);
+          return next;
+        });
+      }
+    }
+
+    setSavingAll(false);
+    if (failed.length > 0) {
+      setSaveAllMessage(
+        `Saved ${toSave.length - failed.length}/${toSave.length}. Failed: ${failed.join(", ")}`
+      );
+    } else {
+      setSaveAllMessage(`✓ Saved ${toSave.length} product${toSave.length === 1 ? "" : "s"}.`);
+    }
+    setTimeout(() => setSaveAllMessage(null), 4000);
   }
 
   async function signOut() {
@@ -128,12 +181,28 @@ export default function AdminProductsTable() {
             price.
           </p>
         </div>
-        <button
-          onClick={signOut}
-          className="rounded-full border border-navy-800/20 px-4 py-2 text-sm font-medium text-navy-800 hover:bg-navy-100"
-        >
-          Sign out
-        </button>
+        <div className="flex items-center gap-3">
+          {saveAllMessage && (
+            <span className="text-sm text-navy-800/70">{saveAllMessage}</span>
+          )}
+          <button
+            onClick={saveAll}
+            disabled={savingAll}
+            className="rounded-full bg-navy-900 px-4 py-2 text-sm font-semibold text-paper hover:bg-navy-800 disabled:opacity-50"
+          >
+            {savingAll
+              ? "Saving all…"
+              : dirtyIds.size > 0
+              ? `Save all (${dirtyIds.size})`
+              : "Save all"}
+          </button>
+          <button
+            onClick={signOut}
+            className="rounded-full border border-navy-800/20 px-4 py-2 text-sm font-medium text-navy-800 hover:bg-navy-100"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
 
       {loadError && <p className="mb-4 text-sm text-red-600">{loadError}</p>}
@@ -206,7 +275,12 @@ export default function AdminProductsTable() {
                   : null;
 
               return (
-                <tr key={p.id} className="border-t border-navy-800/10">
+                <tr
+                  key={p.id}
+                  className={`border-t border-navy-800/10 ${
+                    dirtyIds.has(p.id) ? "bg-amber-50" : ""
+                  }`}
+                >
                   <td className="px-4 py-2">
                     <input
                       type="checkbox"
