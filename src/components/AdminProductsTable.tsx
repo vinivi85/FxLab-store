@@ -40,6 +40,7 @@ export default function AdminProductsTable() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -166,9 +167,13 @@ export default function AdminProductsTable() {
     return <div className="p-10 text-navy-800/60">Checking session…</div>;
   }
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products
+    .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((p) => {
+      if (statusFilter === "active") return p.is_active;
+      if (statusFilter === "inactive") return !p.is_active;
+      return true;
+    });
 
   return (
     <div className="mx-auto max-w-7xl px-6 py-10">
@@ -212,13 +217,31 @@ export default function AdminProductsTable() {
         <CsvImportPanel products={products} onImported={loadProducts} />
       </div>
 
-      <input
-        type="text"
-        placeholder="Search products…"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="mb-4 w-full max-w-sm rounded-full border border-navy-800/20 px-4 py-2 text-sm"
-      />
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="text"
+          placeholder="Search products…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full max-w-sm rounded-full border border-navy-800/20 px-4 py-2 text-sm"
+        />
+
+        <div className="flex rounded-full border border-navy-800/20 p-1 text-sm">
+          {(["all", "active", "inactive"] as const).map((option) => (
+            <button
+              key={option}
+              onClick={() => setStatusFilter(option)}
+              className={`rounded-full px-3 py-1.5 font-medium capitalize transition ${
+                statusFilter === option
+                  ? "bg-navy-900 text-paper"
+                  : "text-navy-800 hover:bg-navy-100"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <p className="mb-2 text-xs text-navy-800/50">{filtered.length} products</p>
 
